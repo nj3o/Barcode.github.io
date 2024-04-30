@@ -83,56 +83,69 @@
         const os = getOS(userAgent); // Extract operating system from User-Agent
         operatingSystemDisplay.textContent = 'Operating System: ' + os;
 
-        function getOS(userAgent) {
-            userAgent = userAgent.toLowerCase();
-    if (userAgent.includes('windows')) return 'Windows';
-    if (userAgent.includes('android')) return 'Android';
-    if (userAgent.includes('macintosh') || userAgent.includes('mac os')) return 'Mac OS';
-    if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) return 'iOS';
-    if (userAgent.includes('linux')) return 'Linux';
-    return 'Unbekannt';
-        }
-// Geolocation
+        // Geolocation
 
-document.addEventListener('DOMContentLoaded', function() {
-    navigator.mediaDevices.getUserMedia({ video: true })
-        .then(startVideo)
-        .catch(err => console.error("Failed to get video stream:", err));
-    setupEventListeners();
-    configureSwitchButtonVisibility(); // Einstellung der Sichtbarkeit des Wechselkameraknopfs basierend auf dem Betriebssystem
-});
-
-function setupEventListeners() {
-    captureBtn.addEventListener('click', captureImageForOCR);
-    scanBarcodeBtn.addEventListener('click', scanBarcode);
-    refreshLocationBtn.addEventListener('click', () => {
-        if ("geolocation" in navigator) {
-            navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
-        } else {
-            document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
-        }
-    });
-}
-
-function fetchAndDisplayAddress(position) {
-    const { latitude, longitude } = position.coords;
-    const apiKey = 'b526254236ad47a1aebff6e137ad1790';
-    const apiUrl = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
-
-    fetch(apiUrl)
-        .then(response => response.json())
-        .then(data => {
-            const address = data.results.length > 0 ? data.results[0].formatted : 'Keine Adresse gefunden.';
-            document.getElementById('locationDisplay').textContent = 'Adresse: ' + address;
-        })
-        .catch(() => {
-            document.getElementById('locationDisplay').textContent = 'Adressabruf fehlgeschlagen.';
+        document.addEventListener('DOMContentLoaded', function() {
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(startVideo)
+                .catch(err => console.error("Failed to get video stream:", err));
+            setupEventListeners();
         });
+
+        function setupEventListeners() {
+            captureBtn.addEventListener('click', captureImageForOCR);
+            scanBarcodeBtn.addEventListener('click', scanBarcode);
+            refreshLocationBtn.addEventListener('click', () => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
+                } else {
+                    document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
+                }
+            });
+
+            // Erweiterung zur Überprüfung, ob es sich um ein iOS- oder Android-Gerät handelt
+            if (isMobileDevice()) {
+                switchCameraBtn.style.display = 'inline-block';
+                switchCameraBtn.addEventListener('click', switchCamera);
+            } 
+            else {
+                switchCameraBtn.style.display = 'none'; // Verstecke den Button auf PCs
+            }
+        }
+
+        function isMobileDevice() {
+    const userAgent = navigator.userAgent;
+    return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
 }
 
-function showError(error) {
-    document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
-}
+        function getOS(userAgent) {
+            if (userAgent.match(/Android/i)) return 'Android';
+            if (userAgent.match(/iPhone|iPad|iPod/i)) return 'iOS';
+            if (userAgent.match(/Windows/i)) return 'Windows';
+            if (userAgent.match(/Macintosh|Mac OS X/i)) return 'Mac OS';
+            if (userAgent.match(/Linux/i)) return 'Linux';
+            return 'Unbekannt'; // Standard-Rückgabewert, wenn keine der Bedingungen zutrifft
+        }
+
+        function fetchAndDisplayAddress(position) {
+            const { latitude, longitude } = position.coords;
+            const apiKey = 'b526254236ad47a1aebff6e137ad1790';
+            const apiUrl = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
+
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const address = data.results.length > 0 ? data.results[0].formatted : 'Keine Adresse gefunden.';
+                    document.getElementById('locationDisplay').textContent = 'Adresse: ' + address;
+                })
+                .catch(() => {
+                    document.getElementById('locationDisplay').textContent = 'Adressabruf fehlgeschlagen.';
+                });
+        }
+
+        function showError(error) {
+            document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
+        }
 
         function startVideo(stream) {
             if (currentStream) {
@@ -147,37 +160,22 @@ function showError(error) {
             };
         }
 
-        function configureSwitchButtonVisibility() {
-            const os = getOS(navigator.userAgent);
-            // Anzeige des Buttons nur für iPhone und Android
-            if (os === 'iOS' || os === 'Android') {
-                switchCameraBtn.style.display = 'inline-block';
-            } else {
-                switchCameraBtn.style.display = 'none';
-            }
-        }
-
         function switchCamera() {
     if (!currentStream) return;
 
-    const videoDevices = [];
     navigator.mediaDevices.enumerateDevices()
         .then(devices => {
-            devices.forEach(device => {
-                if (device.kind === 'videoinput') {
-                    videoDevices.push(device);
-                }
-            });
-
+            const videoDevices = devices.filter(device => device.kind === 'videoinput');
             if (videoDevices.length < 2) {
                 console.log("Keine weiteren Kameras zum Wechseln verfügbar.");
                 return;
             }
+            const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
+            const nextDeviceIndex = (videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1) % videoDevices.length;
 
-            let nextDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentStream.getTracks()[0].getSettings().deviceId) + 1;
-            if (nextDeviceIndex >= videoDevices.length) nextDeviceIndex = 0;
-
-            return navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } } });
+            return navigator.mediaDevices.getUserMedia({
+                video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
+            });
         })
         .then(startVideo)
         .catch(err => console.error("Failed to switch camera:", err));
