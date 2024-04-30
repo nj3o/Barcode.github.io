@@ -103,7 +103,6 @@
                 }
             });
 
-            // Erweiterung zur Überprüfung, ob es sich um ein iOS- oder Android-Gerät handelt
             if (isMobileDevice()) {
                 switchCameraBtn.style.display = 'inline-block';
                 switchCameraBtn.addEventListener('click', switchCamera);
@@ -124,7 +123,7 @@
             if (userAgent.match(/Windows/i)) return 'Windows';
             if (userAgent.match(/Macintosh|Mac OS X/i)) return 'Mac OS';
             if (userAgent.match(/Linux/i)) return 'Linux';
-            return 'Unbekannt'; // Standard-Rückgabewert, wenn keine der Bedingungen zutrifft
+            return 'Unbekannt';
         }
 
         function fetchAndDisplayAddress(position) {
