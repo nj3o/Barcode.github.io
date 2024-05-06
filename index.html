@@ -24,21 +24,26 @@
             margin-top: 20px;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         }
+        .button-container {
+            display: flex;
+            justify-content: center;
+            width: 100%;
+            margin-top: 15px;
+        }
         button {
-        margin-top: 15px;
-        padding: 6px 12px;
-        cursor: pointer;
-        background-color: #007bff00; /* Transparent background */
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative; /* Wichtig für die Positionierung des Tooltips */
+            margin: 0 10px;
+            padding: 6px 12px;
+            cursor: pointer;
+            background-color: #007bff00; /* Transparent background */
+            color: #ffffff00;
+            border: none;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         button:hover {
-            background-color: #0057b300; /* Transparent background on hover */
+            background-color: #0057b300;
         }
         .tooltip-text {
             visibility: hidden;
@@ -52,7 +57,7 @@
             z-index: 1;
             bottom: 100%;
             left: 50%;
-            margin-left: -60px; /* Verschiebt den Tooltip, um ihn zu zentrieren */
+            margin-left: -60px; 
             opacity: 0;
             transition: opacity 0.3s;
         }
@@ -88,9 +93,11 @@
 <body>
     <h1>Webcam Capture, OCR, and Barcode Scan</h1>
     <video id="video" width="320" height="240" autoplay playsinline></video>
-    <button id="captureBtn"><img src="Texterkennung_Piktogramm.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Text Erkennen</div></button>
-    <button id="scanBarcodeBtn"><img src="Scanbarcode.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Barcode scannen</div></button>
-    <button id="switchCameraBtn" style="display: none;"><img src="Switchcamera.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Kamera wechseln</div></button>
+    <div class="button-container">
+        <button id="captureBtn"><img src="Texterkennung_Piktogramm.png" style="height: 70px; width: 70px;"><div class="tooltip-text">Text Erkennen</div></button>
+        <button id="scanBarcodeBtn"><img src="Scanbarcode.png" style="height: 70px; width: 70px;"><div class="tooltip-text">Barcode scannen</div></button>
+        <button id="switchCameraBtn"><img src="Switchcamera.png" style="height: 70px; width: 70px;"><div class="tooltip-text">Kamera wechseln</div></button>
+    </div>
     <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
     <textarea id="textArea" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
     <div id="operatingSystem"></div> 
@@ -159,7 +166,7 @@
             return 'Unbekannt';
         }
 
-        function fetchAndDisplayAddress(position) {
+        function fetchAndDisplayAddress(position) { 
             const { latitude, longitude } = position.coords;
             const apiKey = 'b526254236ad47a1aebff6e137ad1790';
             const apiUrl = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
