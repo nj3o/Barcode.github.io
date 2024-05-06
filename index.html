@@ -138,7 +138,6 @@
 
             if (isMobileDevice()) {
                 switchCameraBtn.style.display = 'inline-block';
-                switchCameraBtn.addEventListener('click', switchCamera);
             } 
             else {
                 switchCameraBtn.style.display = 'none'; // Verstecke den Button auf PCs
@@ -193,25 +192,36 @@
         }
 
         function switchCamera() {
-        if (!currentStream) return;
+            if (!currentStream) return;
 
-        navigator.mediaDevices.enumerateDevices()
-        .then(devices => {
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            if (videoDevices.length < 2) {
-                console.log("Keine weiteren Kameras zum Wechseln verfügbar.");
-                return;
-            }
-            const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
-            const nextDeviceIndex = (videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1) % videoDevices.length;
+            navigator.mediaDevices.enumerateDevices()
+            .then(devices => {
+                const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                if (videoDevices.length < 2) {
+                    console.error("Nicht genügend Kameras verfügbar.");
+                    return;
+                }
+                const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
+                let nextDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1;
+                if (nextDeviceIndex >= videoDevices.length) {
+                    nextDeviceIndex = 0;
+                }
 
-            return navigator.mediaDevices.getUserMedia({
-                video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
-            });
-        })
-        .then(startVideo)
-        .catch(err => console.error("Failed to switch camera:", err));
+                return navigator.mediaDevices.getUserMedia({
+                    video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
+                });
+            })
+            .then(newStream => {
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                currentStream = newStream;
+                video.srcObject = newStream;
+                video.play();
+            })
+            .catch(err => console.error("Fehler beim Wechseln der Kamera: ", err));
         }
+
 
         function captureImageForOCR() {
             const context = canvas.getContext('2d');
