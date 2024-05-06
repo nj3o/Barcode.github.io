@@ -211,41 +211,51 @@
         }
 
         function switchCamera() {
-            console.log("Attempting to switch camera");
+            console.log("Attempting to switch the camera.");
             if (!currentStream) {
-                console.log("No active stream available");
+                console.error("No active stream available");
                 return;
             }
 
             navigator.mediaDevices.enumerateDevices()
-            .then(devices => {
-                const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                console.log("Found video input devices: ", videoDevices.length);
-                if (videoDevices.length < 2) {
-                    console.log("Not enough cameras available.");
-                    return;
-                }
-                const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
-                let nextDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1;
-                if (nextDeviceIndex >= videoDevices.length) {
-                    nextDeviceIndex = 0; 
-                }
+                .then(devices => {
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    if (videoDevices.length < 2) {
+                        console.error("Not enough cameras available.");
+                        return;
+                    }
 
-                return navigator.mediaDevices.getUserMedia({
-                    video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
+                    let currentDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentStream.getTracks()[0].getSettings().deviceId);
+                    let nextDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
+                    let constraints = {
+                        video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
+                    };
+
+                    if (isAndroidDevice()) {
+                        console.log("Applying Android-specific camera settings.");
+                        constraints.video.facingMode = { exact: "environment" };
+                    }
+
+                    return navigator.mediaDevices.getUserMedia(constraints);
+                })
+                .then(newStream => {
+                    if (currentStream) {
+                        currentStream.getTracks().forEach(track => track.stop());
+                    }
+                    currentStream = newStream;
+                    video.srcObject = newStream;
+                    video.play();
+                    console.log("Camera switch successful");
+                })
+                .catch(err => {
+                    console.error("Error switching camera: ", err);
                 });
-            })
-            .then(newStream => {
-                if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop()); 
-                }
-                currentStream = newStream; 
-                video.srcObject = newStream;
-                video.play();
-                console.log("Camera switch successful");
-            })
-            .catch(err => console.error("Error switching camera: ", err));
         }
+
+        function isAndroidDevice() {
+            return /Android/i.test(navigator.userAgent);
+        }
+
 
 
 
