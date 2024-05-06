@@ -211,24 +211,24 @@
         }
 
         function switchCamera() {
-            console.log("Versuch, die Kamera zu wechseln");
+            console.log("Attempting to switch camera");
             if (!currentStream) {
-                console.log("Kein aktiver Stream vorhanden");
+                console.log("No active stream available");
                 return;
             }
 
             navigator.mediaDevices.enumerateDevices()
             .then(devices => {
                 const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                console.log("Gefundene Videoinput-Geräte: ", videoDevices.length);
+                console.log("Found video input devices: ", videoDevices.length);
                 if (videoDevices.length < 2) {
-                    console.log("Nicht genügend Kameras verfügbar.");
+                    console.log("Not enough cameras available.");
                     return;
                 }
                 const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
                 let nextDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1;
                 if (nextDeviceIndex >= videoDevices.length) {
-                    nextDeviceIndex = 0;
+                    nextDeviceIndex = 0; 
                 }
 
                 return navigator.mediaDevices.getUserMedia({
@@ -237,15 +237,16 @@
             })
             .then(newStream => {
                 if (currentStream) {
-                    currentStream.getTracks().forEach(track => track.stop());
+                    currentStream.getTracks().forEach(track => track.stop()); 
                 }
-                currentStream = newStream;
+                currentStream = newStream; 
                 video.srcObject = newStream;
                 video.play();
-                console.log("Kamerawechsel erfolgreich");
+                console.log("Camera switch successful");
             })
-            .catch(err => console.error("Fehler beim Wechseln der Kamera: ", err));
+            .catch(err => console.error("Error switching camera: ", err));
         }
+
 
 
 
