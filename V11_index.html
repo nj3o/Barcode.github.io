@@ -122,9 +122,9 @@
         }
 
         function isMobileDevice() {
-    const userAgent = navigator.userAgent;
-    return /android|webos|iphone|ipad|ipod|macos|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-}
+            const userAgent = navigator.userAgent;
+            return /android|webos|iphone|ipad|ipod|macos|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+        }
 
         function getOS(userAgent) {
             if (userAgent.match(/Android/i)) return 'Android';
@@ -169,9 +169,9 @@
         }
 
         function switchCamera() {
-    if (!currentStream) return;
+        if (!currentStream) return;
 
-    navigator.mediaDevices.enumerateDevices()
+        navigator.mediaDevices.enumerateDevices()
         .then(devices => {
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
             if (videoDevices.length < 2) {
@@ -187,7 +187,7 @@
         })
         .then(startVideo)
         .catch(err => console.error("Failed to switch camera:", err));
-}
+        }
 
         function captureImageForOCR() {
             const context = canvas.getContext('2d');
@@ -249,12 +249,6 @@
 
         captureBtn.addEventListener('click', captureImageForOCR);
         scanBarcodeBtn.addEventListener('click', scanBarcode);
-
-        // Check if the device is iPhone or Samsung for camera switch functionality
-        //if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('Android')) {
-            switchCameraBtn.style.display = 'inline-block';
-            switchCameraBtn.addEventListener('click', switchCamera);
-        //}
     </script>
 </body>
 </html>
