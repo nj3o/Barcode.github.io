@@ -193,13 +193,18 @@
         }
 
         function switchCamera() {
-            if (!currentStream) return;
+            console.log("Versuch, die Kamera zu wechseln");
+            if (!currentStream) {
+                console.log("Kein aktiver Stream vorhanden");
+                return;
+            }
 
             navigator.mediaDevices.enumerateDevices()
             .then(devices => {
                 const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                console.log("Gefundene Videoinput-Geräte: ", videoDevices.length);
                 if (videoDevices.length < 2) {
-                    console.error("Nicht genügend Kameras verfügbar.");
+                    console.log("Nicht genügend Kameras verfügbar.");
                     return;
                 }
                 const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
@@ -219,9 +224,11 @@
                 currentStream = newStream;
                 video.srcObject = newStream;
                 video.play();
+                console.log("Kamerawechsel erfolgreich");
             })
             .catch(err => console.error("Fehler beim Wechseln der Kamera: ", err));
         }
+
 
 
         function captureImageForOCR() {
