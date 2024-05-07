@@ -231,7 +231,7 @@
         const switchCameraBtn = document.getElementById('switchCameraBtn');
 
         function switchCamera() {
-            if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('Android')) {
+            if (isMobileDevice()) {
                 navigator.mediaDevices.enumerateDevices()
                     .then(devices => {
                         const videoDevices = devices.filter(device => device.kind === 'videoinput');
@@ -239,18 +239,18 @@
                             console.error("Not enough cameras available.");
                             return;
                         }
-
+        
                         let currentDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentStream.getTracks()[0].getSettings().deviceId);
                         let nextDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
                         let constraints = {
                             video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
                         };
-
+        
                         if (isAndroidDevice()) {
                             console.log("Applying Android-specific camera settings.");
                             constraints.video.facingMode = { exact: "environment" };
                         }
-
+        
                         return navigator.mediaDevices.getUserMedia(constraints);
                     })
                     .then(newStream => {
@@ -266,10 +266,9 @@
                         console.error("Error switching camera: ", err);
                     });
             } else {
-                switchCameraBtn.style.display = 'none'; // Hide the button on devices other than iPhone and Android
+                console.log("Not a mobile device. Camera switch not supported.");
             }
         }
-
 
         // Geolocation
         function fetchAndDisplayAddress(position) {
