@@ -232,7 +232,6 @@
             setupCameraSwitch();
         });
 
-<<<<<<< HEAD
         function isMobileDevice() {
             return /Android|iPhone/i.test(navigator.userAgent) && !/iPadiPod/i.test(navigator.userAgent);
         }
@@ -240,9 +239,6 @@
         function setupCameraSwitch() {
             const switchCameraBtn = document.getElementById('switchCameraBtn');
 
-=======
-        function switchCamera() {
->>>>>>> 479e6df1575cb4bb14f561893c212a19075f54fe
             if (isMobileDevice()) {
                 navigator.mediaDevices.enumerateDevices()
                     .then(devices => {
@@ -251,7 +247,6 @@
                             switchCameraBtn.style.display = 'block'; // Show button if more than one camera is available
                             initializeCamera(videoDevices); // Initialize the camera with the default setting
                         }
-<<<<<<< HEAD
                     });
             }
         }
@@ -301,40 +296,6 @@
                 });
         }
 
-
-=======
-        
-                        let currentDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentStream.getTracks()[0].getSettings().deviceId);
-                        let nextDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-                        let constraints = {
-                            video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
-                        };
-        
-                        if (isAndroidDevice()) {
-                            console.log("Applying Android-specific camera settings.");
-                            constraints.video.facingMode = { exact: "environment" };
-                        }
-        
-                        return navigator.mediaDevices.getUserMedia(constraints);
-                    })
-                    .then(newStream => {
-                        if (currentStream) {
-                            currentStream.getTracks().forEach(track => track.stop());
-                        }
-                        currentStream = newStream;
-                        video.srcObject = newStream;
-                        video.play();
-                        console.log("Camera switch successful");
-                    })
-                    .catch(err => {
-                        console.error("Error switching camera: ", err);
-                    });
-            } else {
-                console.log("Not a mobile device. Camera switch not supported.");
-            }
-        }
-
->>>>>>> 479e6df1575cb4bb14f561893c212a19075f54fe
         // Geolocation
         function fetchAndDisplayAddress(position) {
             const { latitude, longitude } = position.coords;
