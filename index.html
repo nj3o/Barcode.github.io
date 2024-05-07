@@ -269,7 +269,8 @@
             }
 
             const constraints = {
-                video: { deviceId: currentDeviceId ? { exact: currentDeviceId } : undefined }
+                //video: { deviceId: currentDeviceId ? { exact: currentDeviceId } : undefined, facingmode: exact: 'environment' }
+                video: { facingMode:{ exact:'environment' }}
             };
 
             navigator.mediaDevices.getUserMedia(constraints)
