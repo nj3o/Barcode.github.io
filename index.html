@@ -21,7 +21,7 @@
         #video, #canvas, #photo {
             border: 2px solid #333;
             border-radius: 8px;
-            margin-top: 20px;
+            margin-top: 0px;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         }
         .button-container {
@@ -92,24 +92,32 @@
     </style>
 </head>
 <body>
-    <h1>Webcam Capture, OCR, and Barcode Scan</h1>
-    <video id="video" width="320" height="240" autoplay playsinline></video>
+    <h1>OCR-Barcode Scanner</h1>
+    <video id="video" width="280" height="240" autoplay playsinline></video>
     <div class="button-container">
         <button id="captureBtn" onclick="this.focus()">
-            <img src="Texterkennung_Piktogramm.png" style="height: 70px; width: 70px;">
+            <img src="Texterkennung_Piktogramm.png" style="height: 30px; width: 30px;">
             <div class="tooltip-text">Text erkennen</div>
         </button>
         <button id="scanBarcodeBtn" onclick="this.focus()">
-            <img src="Scanbarcode.png" style="height: 70px; width: 70px;">
+            <img src="Scanbarcode.png" style="height: 30px; width: 30px;">
+            <div class="tooltip-text">Barcode scannen</div>
+        </button>
+        <button id="switchCameraBtn" onclick="this.focus()">
+            <img src="Switchcamera.png" style="height: 30px; width: 30px;">
+            <div class="tooltip-text">Text erkennen</div>
+        </button>
+        <button id="refreshLocationBtn" onclick="this.focus()">
+            <img src="Standortsuchen.png" style="height: 30px; width: 30px;">
             <div class="tooltip-text">Barcode scannen</div>
         </button>
     </div>
     <button id="switchCameraBtn" style="display: none;"><img src="Switchcamera.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Kamera wechseln</div></button>
-    <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
-    <textarea id="textArea" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
+    <canvas id="canvas" width="300" height="300
+    " style="display: none;"></canvas>
+    <textarea id="textArea" width="300" height="300" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
     <div id="operatingSystem"></div> 
     <div id="barcodeResult"></div> 
-    <button id="refreshLocationBtn"><img src="Standortsuchen.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Standort suchen</div></button>
     <div id="locationDisplay" style="margin-top: 10px;"> Ermittelt Adresse...</div>
     <footer>
         &copy; 2024 Aveniq | Owned and Created
@@ -228,73 +236,65 @@
         }
 
         //Switchcamera
-        document.addEventListener('DOMContentLoaded', function() {
-            setupCameraSwitch();
-        });
+        let currentDeviceId = null;
+        let allVideoInputs = [];
+        let isUsingFrontCamera = true; // Start with the assumption that the front camera is in use.
 
-        function isMobileDevice() {
-            return /Android|iPhone/i.test(navigator.userAgent) && !/iPadiPod/i.test(navigator.userAgent);
-        }
+        document.getElementById('switchCameraBtn').addEventListener('click', switchCamera);
 
-        function setupCameraSwitch() {
-            const switchCameraBtn = document.getElementById('switchCameraBtn');
-
-            if (isMobileDevice()) {
-                navigator.mediaDevices.enumerateDevices()
-                    .then(devices => {
-                        const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                        if (videoDevices.length > 1) {
-                            switchCameraBtn.style.display = 'block'; // Show button if more than one camera is available
-                            initializeCamera(videoDevices); // Initialize the camera with the default setting
-                        }
-                    });
+        function checkAndSetup() {
+            if (!navigator.mediaDevices || !navigator.mediaDevices.enumerateDevices) {
+                console.log("This browser does not support the required MediaDevices API.");
+                return;
             }
-        }
-
-        function initializeCamera(videoDevices) {
-            let defaultCamera = videoDevices.find(device => device.label.includes('back')) || videoDevices[0];
-            navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: defaultCamera.deviceId } } })
-                .then(stream => {
-                    document.getElementById('video').srcObject = stream;
-                    currentStream = stream; // Assuming currentStream is globally declared
-                }).catch(err => console.error("Error accessing the media devices.", err));
-        }
-
-        function switchCamera() {
-            if (!currentStream) return;
 
             navigator.mediaDevices.enumerateDevices()
                 .then(devices => {
-                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                    if (videoDevices.length < 2) {
-                        console.error("Not enough cameras available.");
+                    allVideoInputs = devices.filter(device => device.kind === 'videoinput');
+                    if (!allVideoInputs.length) {
+                        console.error("No video inputs found.");
                         return;
                     }
 
-                    let currentDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentStream.getTracks()[0].getSettings().deviceId);
-                    let nextDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-                    let constraints = {
-                        video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
-                    };
-
-                    if (/Android/i.test(navigator.userAgent)) {
-                        constraints.video.facingMode = { exact: (nextDeviceIndex === 0 ? "environment" : "user") };
-                    }
-
-                    return navigator.mediaDevices.getUserMedia(constraints);
+                    // Initially use the first available camera.
+                    currentDeviceId = allVideoInputs[0].deviceId;
+                    setupCamera();
                 })
-                .then(newStream => {
-                    if (currentStream) {
-                        currentStream.getTracks().forEach(track => track.stop());
-                    }
-                    currentStream = newStream;
-                    document.getElementById('video').srcObject = newStream;
-                    console.log("Camera switch successful");
+                .catch(err => console.error("Error enumerating devices:", err));
+        }
+
+        function setupCamera() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: { deviceId: currentDeviceId ? { exact: currentDeviceId } : undefined }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(stream => {
+                    currentStream = stream;
+                    video.srcObject = stream;
+                    video.play();
                 })
                 .catch(err => {
-                    console.error("Error switching camera: ", err);
+                    console.error("Error accessing the camera:", err);
                 });
         }
+
+        function switchCamera() {
+            if (['Android', 'iPhone'].includes(navigator.platform) && allVideoInputs.length > 1) {
+                let currentIndex = allVideoInputs.findIndex(device => device.deviceId === currentDeviceId);
+                isUsingFrontCamera = !isUsingFrontCamera; // Toggle camera direction
+                currentDeviceId = allVideoInputs[(currentIndex + 1) % allVideoInputs.length].deviceId;
+                setupCamera();
+            } else {
+                console.log("Switching cameras is not supported on this device.");
+            }
+        }
+
+        checkAndSetup(); // Initial setup call
 
         // Geolocation
         function fetchAndDisplayAddress(position) {
