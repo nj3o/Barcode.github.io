@@ -103,10 +103,6 @@
             <img src="Scanbarcode.png" style="height: 30px; width: 30px;">
             <div class="tooltip-text">Barcode scannen</div>
         </button>
-        <button id="switchCameraBtn" onclick="this.focus()">
-            <img src="Switchcamera.png" style="height: 30px; width: 30px;">
-            <div class="tooltip-text">Text erkennen</div>
-        </button>
         <button id="refreshLocationBtn" onclick="this.focus()">
             <img src="Standortsuchen.png" style="height: 30px; width: 30px;">
             <div class="tooltip-text">Barcode scannen</div>
@@ -124,29 +120,73 @@
     </footer>
 
     <script>
-        //Kamera anmachen und initialisieren
+        //Kamera anmachen und switchcamera richtig anpassen
         const video = document.getElementById('video');
         let currentStream;
 
         document.addEventListener('DOMContentLoaded', function() {
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(startVideo)
-                .catch(err => console.error("Failed to get video stream:", err));
-            setupEventListeners();
-            
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: "environment", 
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            })
+            .then(stream => {
+                currentStream = stream; 
+                video.srcObject = stream; 
+                startVideo(stream); 
+                checkAndEnableSwitchCamera();
+            })
+            .catch(err => {
+                console.error("Failed to get video stream:", err); 
+            });
         });
+
+        function checkAndEnableSwitchCamera() {
+            if (navigator.userAgent.match(/Android|iPhone/)) {
+                const switchCameraBtn = document.getElementById('switchCameraBtn');
+                switchCameraBtn.style.display = 'block';
+                switchCameraBtn.addEventListener('click', switchCamera);
+            }
+        }
 
         function startVideo(stream) {
             if (currentStream) {
-                currentStream.getTracks().forEach(track => {
-                    track.stop();
-                });
+                currentStream.getTracks().forEach(track => track.stop());
             }
             currentStream = stream;
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-            };
+            video.srcObject = stream; 
+            video.play().catch(err => console.error('Error playing the video:', err)); 
+        }
+
+        function switchCamera() {
+            if (!currentStream) return;
+
+            navigator.mediaDevices.enumerateDevices()
+                .then(devices => {
+                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
+                    if (videoDevices.length < 2) {
+                        console.log("Not enough cameras available.");
+                        return;
+                    }
+
+                    let currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
+                    let nextDeviceIndex = (videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1) % videoDevices.length;
+
+                    return navigator.mediaDevices.getUserMedia({
+                        video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
+                    });
+                })
+                .then(newStream => {
+                    if (currentStream) {
+                        currentStream.getTracks().forEach(track => track.stop());
+                    }
+                    currentStream = newStream;
+                    video.srcObject = newStream;
+                    video.play().catch(err => console.error('Error playing the video after switching cameras:', err));
+                })
+                .catch(err => console.error("Failed to switch camera:", err));
         }
 
         // Texterkennung
@@ -234,41 +274,6 @@
                 os = 'Linux';
             }
             return os;
-        }
-
-        //Switchcamera
-        document.addEventListener('DOMContentLoaded', function() {
-            if (navigator.userAgent.match(/Android|iPhone/)) {
-                document.getElementById('switchCameraBtn').style.display = 'block';
-            }
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(stream => {
-                    currentStream = stream;
-                    video.srcObject = stream;
-                })
-                .catch(err => console.error("Failed to get video stream:", err));
-        });
-
-        function switchCamera() {
-            if (!currentStream) return;
-            navigator.mediaDevices.enumerateDevices()
-                .then(devices => {
-                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                    if (videoDevices.length < 2) return;
-                    const currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
-                    const nextDeviceIndex = (videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1) % videoDevices.length;
-                    return navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
-                    });
-                })
-                .then(newStream => {
-                    if (currentStream) {
-                        currentStream.getTracks().forEach(track => track.stop());
-                    }
-                    currentStream = newStream;
-                    video.srcObject = newStream;
-                })
-                .catch(err => console.error("Failed to switch camera:", err));
         }
 
         // Geolocation
