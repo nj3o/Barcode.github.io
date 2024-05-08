@@ -18,34 +18,38 @@
             justify-content: center;
             height: 100vh;
         }
+
+        h1 {
+            font-size: 20px;
+            margin-bottom: 20px;
+        }
+
         #video, #canvas, #photo {
             border: 2px solid #333;
             border-radius: 8px;
-            margin-top: 0px;
+            margin-top: 20px;
             box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
         }
+
         .button-container {
-            display: flex;
-            justify-content: center;
-            width: 100%;
-            margin-top: 15px;
+            display: flex; /* Aktiviert Flexbox für diesen Container */
+            justify-content: center; /* Zentriert die Buttons horizontal */
+            gap: 20px; /* Setzt einen Abstand zwischen den Buttons */
+            margin-top: 20px;
         }
+
         button {
-        margin-top: 15px;
-        padding: 6px 12px;
-        cursor: pointer;
-        background-color: #007bff00; /* Transparent background */
-        color: #fff;
-        border: none;
-        border-radius: 6px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        position: relative; /* Wichtig für die Positionierung des Tooltips */
+            cursor: pointer;
+            background-color: transparent; /* Transparenter Hintergrund */
+            border: none;
+            position: relative;
         }
-        button:hover {
-            background-color: #0057b300; /* Transparent background on hover */
+
+        button img {
+            height: 50px;
+            width: 50px;
         }
+
         .tooltip-text {
             visibility: hidden;
             width: 120px;
@@ -56,22 +60,30 @@
             padding: 5px 0;
             position: absolute;
             z-index: 1;
-            bottom: 100%;
+            bottom: -30px;
             left: 50%;
-            margin-left: -60px; /* Verschiebt den Tooltip, um ihn zu zentrieren */
+            margin-left: -60px;
             opacity: 0;
             transition: opacity 0.3s;
         }
-        button:hover .tooltip-text {
+
+        button:focus .tooltip-text,
+        button:active .tooltip-text {
             visibility: visible;
             opacity: 1;
+        }
+
+        #switchCameraBtn {
+            margin-top: 10px;
+            margin-bottom: 0px;
+            display: none;
         }
 
         textarea {
             margin-top: 20px;
             width: 90%;
             max-width: 320px;
-            height: 100px;
+            height: 150px;
             border-radius: 8px;
             padding: 12px;
             resize: none;
@@ -84,7 +96,7 @@
         }
         footer {
             width: 100%;
-            padding: 10px;
+            padding: 20px;
             text-align: center;
             margin-top: 20px;
             border-top: 2px solid #333;
@@ -92,109 +104,123 @@
     </style>
 </head>
 <body>
-    <h1>OCR-Barcode Scanner</h1>
-    <video id="video" width="280" height="240" autoplay playsinline></video>
+    <h1>Webcam Capture, OCR, and Barcode Scan</h1>
+    <video id="video" width="320" height="240" autoplay playsinline></video>
     <div class="button-container">
-        <button id="captureBtn" onclick="this.focus()">
-            <img src="Texterkennung_Piktogramm.png" style="height: 30px; width: 30px;">
+        <button id="captureBtn">
+            <img src="Texterkennung_Piktogramm.png">
             <div class="tooltip-text">Text erkennen</div>
         </button>
-        <button id="scanBarcodeBtn" onclick="this.focus()">
-            <img src="Scanbarcode.png" style="height: 30px; width: 30px;">
+        <button id="scanBarcodeBtn">
+            <img src="Scanbarcode.png">
             <div class="tooltip-text">Barcode scannen</div>
         </button>
-        <button id="refreshLocationBtn" onclick="this.focus()">
-            <img src="Standortsuchen.png" style="height: 30px; width: 30px;">
-            <div class="tooltip-text">Barcode scannen</div>
+        <button id="refreshLocationBtn">
+            <img src="Standortsuchen.png">
+            <div class="tooltip-text">Standort suchen</div>
         </button>
     </div>
     <button id="switchCameraBtn" style="display: none;"><img src="Switchcamera.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Kamera wechseln</div></button>
-    <canvas id="canvas" width="300" height="300
-    " style="display: none;"></canvas>
-    <textarea id="textArea" width="300" height="300" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
+    <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+    <textarea id="textArea" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
     <div id="operatingSystem"></div> 
     <div id="barcodeResult"></div> 
     <div id="locationDisplay" style="margin-top: 10px;"> Ermittelt Adresse...</div>
-    <footer>
+        <footer>
         &copy; 2024 Aveniq | Owned and Created
-    </footer>
+        </footer>
 
     <script>
-        //Kamera anmachen und switchcamera richtig anpassen
+        const operatingSystemDisplay = document.getElementById('operatingSystem');
+        const captureBtn = document.getElementById('captureBtn');
+        const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
         const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const textArea = document.getElementById('textArea');
+        const barcodeResultDisplay = document.getElementById('barcodeResult');
         let currentStream;
+        let frontCamera = false;
+        const userAgent = navigator.userAgent;
+        const os = getOS(userAgent); // Extract operating system from User-Agent
 
         document.addEventListener('DOMContentLoaded', function() {
-            navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: "environment", 
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            })
-            .then(stream => {
-                currentStream = stream; 
-                video.srcObject = stream; 
-                startVideo(stream); 
-                checkAndEnableSwitchCamera();
-            })
-            .catch(err => {
-                console.error("Failed to get video stream:", err); 
-            });
-        });
+            const constraints = {
+                video: { facingMode: frontCamera ? 'user' : 'environment' }
+            };
 
-        function checkAndEnableSwitchCamera() {
-            if (navigator.userAgent.match(/Android|iPhone/)) {
-                const switchCameraBtn = document.getElementById('switchCameraBtn');
-                switchCameraBtn.style.display = 'block';
-                switchCameraBtn.addEventListener('click', switchCamera);
-            }
-        }
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(startVideo)
+                .catch(err => console.error("Failed to get video stream:", err));
+
+            setupEventListeners();
+            checkDeviceForCameraSwitch();
+        });
 
         function startVideo(stream) {
             if (currentStream) {
-                currentStream.getTracks().forEach(track => track.stop());
+                currentStream.getTracks().forEach(track => {
+                    track.stop();
+                });
             }
             currentStream = stream;
-            video.srcObject = stream; 
-            video.play().catch(err => console.error('Error playing the video:', err)); 
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+            };
         }
 
+        // Operating System
+        operatingSystemDisplay.textContent = 'Operating System: ' + os;
+
+        function isMobileDevice() {
+            const userAgent = navigator.userAgent;
+            return /android|webos|iphone|ipad|ipod|macos|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+        }
+        function getOS(userAgent) {
+            if (userAgent.match(/Android/i)) return 'Android';
+            if (userAgent.match(/iPhone|iPad|iPod/i)) return 'iOS';
+            if (userAgent.match(/Windows/i)) return 'Windows';
+            if (userAgent.match(/Macintosh|Mac OS X/i)) return 'Mac OS';
+            if (userAgent.match(/Linux/i)) return 'Linux';
+            return 'Unbekannt';
+        }
+
+        // EventListeners
+        function setupEventListeners() {
+            captureBtn.addEventListener('click', captureImageForOCR);
+            scanBarcodeBtn.addEventListener('click', scanBarcode);
+            refreshLocationBtn.addEventListener('click', () => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
+                } else {
+                    document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
+                }
+            });
+        }
+
+        // Switchcamera
         function switchCamera() {
-            if (!currentStream) return;
+            frontCamera = !frontCamera;
+            const constraints = {
+                video: { facingMode: frontCamera ? 'user' : 'environment' }
+            };
 
-            navigator.mediaDevices.enumerateDevices()
-                .then(devices => {
-                    const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                    if (videoDevices.length < 2) {
-                        console.log("Not enough cameras available.");
-                        return;
-                    }
-
-                    let currentDeviceId = currentStream.getTracks()[0].getSettings().deviceId;
-                    let nextDeviceIndex = (videoDevices.findIndex(device => device.deviceId === currentDeviceId) + 1) % videoDevices.length;
-
-                    return navigator.mediaDevices.getUserMedia({
-                        video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } }
-                    });
-                })
-                .then(newStream => {
-                    if (currentStream) {
-                        currentStream.getTracks().forEach(track => track.stop());
-                    }
-                    currentStream = newStream;
-                    video.srcObject = newStream;
-                    video.play().catch(err => console.error('Error playing the video after switching cameras:', err));
-                })
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(startVideo)
                 .catch(err => console.error("Failed to switch camera:", err));
         }
 
-        // Texterkennung
-        const captureBtn = document.getElementById('captureBtn');
-        //Konstanten für Textarea/Textbox
-        const canvas = document.getElementById('canvas');
-        const textArea = document.getElementById('textArea');
+        function checkDeviceForCameraSwitch() {
+            if (isMobileDevice()) {
+                switchCameraBtn.style.display = 'inline-block';
+                switchCameraBtn.addEventListener('click', switchCamera);
+            } else {
+                switchCameraBtn.style.display = 'none';
+            }
+        }
 
+        // Texterkennung
         function captureImageForOCR() {
             const context = canvas.getContext('2d');
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -218,9 +244,48 @@
             });
         }
 
-        // Barcodeerkennung
-        const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
+        // bildschärfung
+        function sharpenImage(imageData, width, height, strength) {
+            const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+            const side = Math.round(Math.sqrt(kernel.length));
+            const halfSide = Math.floor(side / 2);
+            const src = imageData.data;
+            const sw = width;
+            const sh = height;
+            const w = sw;
+            const outputData = new ImageData(width, height);
+            const dst = outputData.data;
 
+            for (let y = 0; y < sh; y++) {
+                for (let x = 0; x < sw; x++) {
+                    let sy = y;
+                    let sx = x;
+                    let dstOff = (y * w + x) * 4;
+                    let r = 0, g = 0, b = 0, a = 0;
+                    for (let cy = 0; cy < side; cy++) {
+                        for (let cx = 0; cx < side; cx++) {
+                            let scy = sy + cy - halfSide;
+                            let scx = sx + cx - halfSide;
+                            if (scy >= 0 && scy < sh && scx >= 0 && scx < sw) {
+                                let srcOff = (scy * sw + scx) * 4;
+                                let wt = kernel[cy * side + cx];
+                                r += src[srcOff] * wt;
+                                g += src[srcOff + 1] * wt;
+                                b += src[srcOff + 2] * wt;
+                                a += src[srcOff + 3] * wt;
+                            }
+                        }
+                    }
+                    dst[dstOff] = r + strength * (r - src[dstOff]);
+                    dst[dstOff + 1] = g + strength * (g - src[dstOff + 1]);
+                    dst[dstOff + 2] = b + strength * (b - src[dstOff + 2]);
+                    dst[dstOff + 3] = src[dstOff + 3]; 
+                }
+            }
+            return outputData;
+        }
+
+        // Barcode Scannen
         function scanBarcode() {
             Quagga.init({
                 inputStream: {
@@ -251,37 +316,17 @@
                 });
             });
         }
-
-        const barcodeResultDisplay = document.getElementById('barcodeResult');
-
-        // Operating System 
-        const operatingSystemDisplay = document.getElementById('operatingSystem');
-        const userAgent = navigator.userAgent;
-        const os = getOS(userAgent); // Extract operating system from User-Agent
-        operatingSystemDisplay.textContent = 'Operating System: ' + os;
-
-        function getOS(userAgent) {
-            let os = '';
-            if (userAgent.match(/Windows/i)) {
-                os = 'Windows';
-            } else if (userAgent.match(/Android/i)) {
-                os = 'Android';
-            } else if (userAgent.match(/Macintosh|Mac OS/i)) {
-                os = 'Mac OS';
-            } else if (userAgent.match(/iPhone|iPad|iPod/i)) {
-                os = 'iOS';
-            } else if (userAgent.match(/Linux/i)) {
-                os = 'Linux';
-            }
-            return os;
-        }
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(startVideo)
+            .catch(err => console.error("Failed to get video stream:", err));
+        captureBtn.addEventListener('click', captureImageForOCR);
+        scanBarcodeBtn.addEventListener('click', scanBarcode);
 
         // Geolocation
         function fetchAndDisplayAddress(position) {
             const { latitude, longitude } = position.coords;
             const apiKey = 'b526254236ad47a1aebff6e137ad1790';
             const apiUrl = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
-
             fetch(apiUrl)
                 .then(response => response.json())
                 .then(data => {
@@ -292,26 +337,8 @@
                     document.getElementById('locationDisplay').textContent = 'Adressabruf fehlgeschlagen.';
                 });
         }
-
         function showError(error) {
             document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
-        }
-
-        // Eventlisteners
-        function setupEventListeners() {
-            captureBtn.addEventListener('click', captureImageForOCR);
-            scanBarcodeBtn.addEventListener('click', scanBarcode);
-            refreshLocationBtn.addEventListener('click', () => {
-                if ("geolocation" in navigator) {
-                    navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
-                } else {
-                    document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
-                }
-            });
-            if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('Android')) {
-                switchCameraBtn.style.display = 'inline-block';
-                switchCameraBtn.addEventListener('click', switchCamera);
-            }
         }
     </script>
 </body>
