@@ -134,6 +134,7 @@
         const operatingSystemDisplay = document.getElementById('operatingSystem');
         const captureBtn = document.getElementById('captureBtn');
         const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
+        const refreshLocationBtn = document.getElementById('refreshLocationBtn');
         const switchCameraBtn = document.getElementById('switchCameraBtn');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
@@ -142,9 +143,11 @@
         let currentStream;
         let frontCamera = false;
         const userAgent = navigator.userAgent;
-        const os = getOS(userAgent); // Extract operating system from User-Agent
+        const os = getOS(userAgent);
         let deviceIdMap = { front: null, back: null };
+
         operatingSystemDisplay.textContent = 'Operating System: ' + os;
+
 
         document.addEventListener('DOMContentLoaded', async function() {
             await detectCameras();
@@ -190,7 +193,18 @@
             };
         }
 
-        function switchCamera() {
+        function switchCameraiPhone() {
+            frontCamera = !frontCamera;
+            const constraints = {
+                video: { facingMode: frontCamera ? 'user' : 'environment' }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(startVideo)
+                .catch(err => console.error("Failed to switch camera:", err));
+        }
+
+        function switchCameraAndroid() {
             frontCamera = !frontCamera;
             const constraints = {
                 video: { deviceId: { exact: frontCamera ? deviceIdMap.front : deviceIdMap.back } }
@@ -217,12 +231,15 @@
         function checkDeviceForCameraSwitch() {
             if (isMobileDevice()) {
                 switchCameraBtn.style.display = 'inline-block';
-                switchCameraBtn.addEventListener('click', switchCamera);
+                if (os === 'iOS') {
+                    switchCameraBtn.addEventListener('click', switchCameraiPhone);
+                } else if (os === 'Android') {
+                    switchCameraBtn.addEventListener('click', switchCameraAndroid);
+                }
             } else {
                 switchCameraBtn.style.display = 'none';
             }
         }
-
         // EventListeners
         function setupEventListeners() {
             captureBtn.addEventListener('click', captureImageForOCR);
