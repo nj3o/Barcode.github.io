@@ -170,6 +170,45 @@
             };
         }
 
+        function switchCamera() {
+            frontCamera = !frontCamera;
+            const constraints = {
+                video: { facingMode: frontCamera ? 'user' : 'environment' }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(startVideo)
+                .catch(err => console.error("Failed to switch camera:", err));
+        }
+
+        function switchCameraSamsung() {
+            const constraints = {
+                video: { facingMode: 'environment' }
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then(startVideo)
+                .catch(err => console.error("Failed to switch camera for Samsung:", err));
+        }
+
+        function isSamsungDevice() {
+            return /samsung/i.test(userAgent.toLowerCase());
+        }
+
+        function checkDeviceForCameraSwitch() {
+            if (isMobileDevice()) {
+                switchCameraBtn.style.display = 'inline-block';
+                switchCameraBtn.addEventListener('click', switchCamera);
+                if (isSamsungDevice()) {
+                    switchCameraSamsungBtn.style.display = 'inline-block';
+                    switchCameraSamsungBtn.addEventListener('click', switchCameraSamsung);
+                }
+            } else {
+                switchCameraBtn.style.display = 'none';
+                switchCameraSamsungBtn.style.display = 'none';
+            }
+        }
+
         // Operating System
         operatingSystemDisplay.textContent = 'Operating System: ' + os;
 
@@ -197,27 +236,7 @@
                     document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
                 }
             });
-        }
 
-        // Switchcamera
-        function switchCamera() {
-            frontCamera = !frontCamera;
-            const constraints = {
-                video: { facingMode: frontCamera ? 'user' : 'environment' }
-            };
-
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(startVideo)
-                .catch(err => console.error("Failed to switch camera:", err));
-        }
-
-        function checkDeviceForCameraSwitch() {
-            if (isMobileDevice()) {
-                switchCameraBtn.style.display = 'inline-block';
-                switchCameraBtn.addEventListener('click', switchCamera);
-            } else {
-                switchCameraBtn.style.display = 'none';
-            }
         }
 
         // Texterkennung
