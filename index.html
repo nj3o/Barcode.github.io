@@ -32,15 +32,15 @@
         }
 
         .button-container {
-            display: flex; /* Aktiviert Flexbox für diesen Container */
-            justify-content: center; /* Zentriert die Buttons horizontal */
-            gap: 20px; /* Setzt einen Abstand zwischen den Buttons */
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
             margin-top: 20px;
         }
 
         button {
             cursor: pointer;
-            background-color: transparent; /* Transparenter Hintergrund */
+            background-color: transparent; 
             border: none;
             position: relative;
         }
@@ -205,14 +205,25 @@
         }
 
         function switchCameraAndroid() {
-            frontCamera = !frontCamera;
             const constraints = {
-                video: { deviceId: { exact: frontCamera ? deviceIdMap.front : deviceIdMap.back } }
+                video: {
+                    facingMode: 'environment', 
+                    width: { ideal: 1280 }, 
+                    height: { ideal: 720 }
+                },
+                audio: false 
             };
 
             navigator.mediaDevices.getUserMedia(constraints)
-                .then(startVideo)
-                .catch(err => console.error("Failed to switch camera:", err));
+                .then(stream => {
+                    if (currentStream) {
+                        currentStream.getTracks().forEach(track => track.stop());
+                    }
+                    currentStream = stream;
+                    video.srcObject = stream;
+                    video.onloadedmetadata = () => video.play();
+                })
+                .catch(err => console.error("Failed to switch to back camera on Android:", err));
         }
 
         function isMobileDevice() {
@@ -260,21 +271,20 @@
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imageDataUrl = canvas.toDataURL('image/png');
 
-            // Simulate a scan effect with vibration and visual feedback
             if ('vibrate' in navigator) {
-                navigator.vibrate([200]); // Vibrate for 200ms
+                navigator.vibrate([200]); 
             }
-            canvas.style.backgroundColor = '#ffcc00'; // Change canvas background color temporarily
+            canvas.style.backgroundColor = '#ffcc00'; 
 
             Tesseract.recognize(
                 imageDataUrl,
-                'deu', // Setting language to German for umlaut recognition
+                'deu', 
                 {
                     logger: m => console.log(m) 
                 }
             ).then(({ data: { text } }) => {
                 textArea.value = text; 
-                canvas.style.backgroundColor = ''; // Reset canvas background color
+                canvas.style.backgroundColor = ''; 
             });
         }
 
@@ -339,14 +349,13 @@
                 Quagga.onDetected(function(result) {
                     barcodeResultDisplay.textContent = 'Barcode: ' + result.codeResult.code;
                     Quagga.stop();
-                    // Simulate a successful barcode scan effect with vibration and green blink
                     if ('vibrate' in navigator) {
-                        navigator.vibrate([200]); // Vibrate for 200ms
+                        navigator.vibrate([200]); 
                     }
                     barcodeResultDisplay.style.backgroundColor = 'green';
                     setTimeout(() => {
-                        barcodeResultDisplay.style.backgroundColor = ''; // Reset background color
-                    }, 1000); // Reset color after 1 second
+                        barcodeResultDisplay.style.backgroundColor = '';
+                    }, 1000);
                 });
             });
         }
