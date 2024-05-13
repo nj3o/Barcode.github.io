@@ -21,7 +21,7 @@
 
         h1 {
             font-size: 20px;
-            margin-bottom: 20px;
+            margin: 20px;
         }
 
         #video, #canvas, #photo {
@@ -105,7 +105,7 @@
 </head>
 <body>
     <h1>Webcam Capture, OCR, and Barcode Scan</h1>
-    <video id="video" width="320" height="240" autoplay playsinline></video>
+    <video id="video" width="320" height="200" autoplay playsinline></video>
     <div class="button-container">
         <button id="captureBtn">
             <img src="Texterkennung_Piktogramm.png">
@@ -144,47 +144,33 @@
         let frontCamera = false;
         const userAgent = navigator.userAgent;
         const os = getOS(userAgent);
-        let deviceIdMap = { front: null, back: null };
+        let deviceIdMap = { front: null, back: null, current: null };
 
         operatingSystemDisplay.textContent = 'Operating System: ' + os;
 
 
         document.addEventListener('DOMContentLoaded', async function() {
             await detectCameras();
-            const constraints = {
-                video: { deviceId: { exact: deviceIdMap.back } }
-            };
-
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(startVideo)
-                .catch(err => console.error("Failed to get video stream:", err));
-
             setupEventListeners();
-            checkDeviceForCameraSwitch();
+            initializeCamera();
         });
 
-        async function detectCameras() {
+        async function detectCameras() { 
             const devices = await navigator.mediaDevices.enumerateDevices();
-            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            for (let device of videoDevices) {
-                if (/front|user/i.test(device.label)) {
-                    deviceIdMap.front = device.deviceId;
-                } else if (/back|environment|rear/i.test(device.label)) {
-                    deviceIdMap.back = device.deviceId;
+            devices.forEach(device => {
+                if (device.kind === 'videoinput') {
+                    if (/back|rear|environment/i.test(device.label)) {
+                        deviceIdMap.back = device.deviceId;
+                    } else if (/front|user|face/i.test(device.label)) {
+                        deviceIdMap.front = device.deviceId;
+                    }
                 }
-            }
-            if (!deviceIdMap.front || !deviceIdMap.back) {
-                // Fallback to facingMode
-                deviceIdMap.front = 'user';
-                deviceIdMap.back = 'environment';
-            }
+            });
         }
 
         function startVideo(stream) {
             if (currentStream) {
-                currentStream.getTracks().forEach(track => {
-                    track.stop();
-                });
+                currentStream.getTracks().forEach(track => track.stop());
             }
             currentStream = stream;
             video.srcObject = stream;
@@ -193,39 +179,42 @@
             };
         }
 
-        function switchCameraiPhone() {
-            frontCamera = !frontCamera;
+        function initializeCamera() {
+            // Start with the back camera if available
             const constraints = {
-                video: { facingMode: frontCamera ? 'user' : 'environment' }
+                video: { deviceId: deviceIdMap.back ? { exact: deviceIdMap.back } : undefined }
             };
+            deviceIdMap.current = deviceIdMap.back; // Set the current device to back
 
             navigator.mediaDevices.getUserMedia(constraints)
                 .then(startVideo)
-                .catch(err => console.error("Failed to switch camera:", err));
+                .catch(err => console.error("Failed to get video stream:", err));
         }
 
-        function switchCameraAndroid() {
+        function switchCamera() {
+            if (!currentStream) return;
+
+            const newDeviceId = deviceIdMap.current === deviceIdMap.back ? deviceIdMap.front : deviceIdMap.back;
+            if (!newDeviceId) return;
+
             const constraints = {
-                video: {
-                    facingMode: 'environment', 
-                    width: { ideal: 1280 }, 
-                    height: { ideal: 720 }
-                },
-                audio: false 
+                video: { deviceId: { exact: newDeviceId } }
             };
 
             navigator.mediaDevices.getUserMedia(constraints)
-                .then(stream => {
+                .then(newStream => {
                     if (currentStream) {
                         currentStream.getTracks().forEach(track => track.stop());
                     }
-                    currentStream = stream;
-                    video.srcObject = stream;
+                    currentStream = newStream;
+                    deviceIdMap.current = newDeviceId; // Update the current camera device
+                    video.srcObject = newStream;
                     video.onloadedmetadata = () => video.play();
                 })
-                .catch(err => console.error("Failed to switch to back camera on Android:", err));
+                .catch(err => {
+                    console.error("Failed to switch camera:", err);
+                });
         }
-
         function isMobileDevice() {
             return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
         }
@@ -254,7 +243,8 @@
         // EventListeners
         function setupEventListeners() {
             captureBtn.addEventListener('click', captureImageForOCR);
-            scanBarcodeBtn.addEventListener('click', scanBarcode);
+            scanBarcodeBtn.addEventListener('click', scanBarcode)
+            switchCameraBtn.addEventListener('click', switchCamera);;
             refreshLocationBtn.addEventListener('click', () => {
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
