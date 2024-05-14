@@ -120,7 +120,7 @@
             <div class="tooltip-text">Standort suchen</div>
         </button>
     </div>
-    <button id="switchCameraBtn" style="display: none;"><img src="Switchcamera.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Kamera wechseln</div></button>
+    <button id="switchButton"><img src="Switchcamera.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Kamera wechseln</div></button>
     <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
     <textarea id="textArea" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
     <div id="operatingSystem"></div> 
@@ -135,89 +135,48 @@
         const captureBtn = document.getElementById('captureBtn');
         const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
         const refreshLocationBtn = document.getElementById('refreshLocationBtn');
-        const switchCameraBtn = document.getElementById('switchCameraBtn');
+        const switchCameraBtn = document.getElementById('switchButton');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const textArea = document.getElementById('textArea');
         const barcodeResultDisplay = document.getElementById('barcodeResult');
-        let currentStream;
-        let frontCamera = false;
         const userAgent = navigator.userAgent;
         const os = getOS(userAgent);
-        let deviceIdMap = { front: null, back: null, current: null };
+        let currentStream;
 
-        operatingSystemDisplay.textContent = 'Operating System: ' + os;
-
-
-        document.addEventListener('DOMContentLoaded', async function() {
-            await detectCameras();
-            setupEventListeners();
-            initializeCamera();
-        });
-
-        async function detectCameras() { 
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            devices.forEach(device => {
-                if (device.kind === 'videoinput') {
-                    if (/back|rear|environment/i.test(device.label)) {
-                        deviceIdMap.back = device.deviceId;
-                    } else if (/front|user|face/i.test(device.label)) {
-                        deviceIdMap.front = device.deviceId;
-                    }
-                }
-            });
+        operatingSystemDisplay.textContent = 'Operating System: ' + os; 
+        
+        //Hier möchte ich eine startVideo funktion
+        function startVideo(stream) {
+            video.srcObject = stream;
+            currentStream = stream;
         }
 
-        function startVideo(stream) {
+        //Hier sollte diese Switchcamera und inizializecamera funktion eingebunden/implementiert werden!!!!!!!!
+        async function initializeCamera() {
+            const constraints = {
+                audio: false,
+                video: {
+                    facingMode: video.getAttribute('facing-mode') || 'user'
+                }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                startVideo(stream);
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+            }
+        }
+
+        switchButton.addEventListener('click', async () => {
             if (currentStream) {
                 currentStream.getTracks().forEach(track => track.stop());
             }
-            currentStream = stream;
-            video.srcObject = stream;
-            video.onloadedmetadata = () => {
-                video.play();
-            };
-        }
-
-        function initializeCamera() {
-            // Start with the back camera if available
-            const constraints = {
-                video: { deviceId: deviceIdMap.back ? { exact: deviceIdMap.back } : undefined }
-            };
-            deviceIdMap.current = deviceIdMap.back; // Set the current device to back
-
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(startVideo)
-                .catch(err => console.error("Failed to get video stream:", err));
-        }
-
-        function switchCamera() {
-            if (!currentStream) return;
-
-            const newDeviceId = deviceIdMap.current === deviceIdMap.back ? deviceIdMap.front : deviceIdMap.back;
-            if (!newDeviceId) return;
-
-            const constraints = {
-                video: { deviceId: { exact: newDeviceId } }
-            };
-
-            navigator.mediaDevices.getUserMedia(constraints)
-                .then(newStream => {
-                    if (currentStream) {
-                        currentStream.getTracks().forEach(track => track.stop());
-                    }
-                    currentStream = newStream;
-                    deviceIdMap.current = newDeviceId; // Update the current camera device
-                    video.srcObject = newStream;
-                    video.onloadedmetadata = () => video.play();
-                })
-                .catch(err => {
-                    console.error("Failed to switch camera:", err);
-                });
-        }
-        function isMobileDevice() {
-            return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
-        }
+            const facingMode = video.getAttribute('facing-mode') === 'user' ? 'environment' : 'user';
+            video.setAttribute('facing-mode', facingMode);
+            await initializeCamera();
+        });
 
         function getOS(userAgent) {
             if (userAgent.match(/Android/i)) return 'Android';
@@ -228,23 +187,10 @@
             return 'Unbekannt';
         }
 
-        function checkDeviceForCameraSwitch() {
-            if (isMobileDevice()) {
-                switchCameraBtn.style.display = 'inline-block';
-                if (os === 'iOS') {
-                    switchCameraBtn.addEventListener('click', switchCameraiPhone);
-                } else if (os === 'Android') {
-                    switchCameraBtn.addEventListener('click', switchCameraAndroid);
-                }
-            } else {
-                switchCameraBtn.style.display = 'none';
-            }
-        }
-        // EventListeners
+        // Ändere hier den code auch etwas um, sodass da noch der switchCameraBtn miteinbezogen wird!!!
         function setupEventListeners() {
             captureBtn.addEventListener('click', captureImageForOCR);
-            scanBarcodeBtn.addEventListener('click', scanBarcode)
-            switchCameraBtn.addEventListener('click', switchCamera);;
+            scanBarcodeBtn.addEventListener('click', scanBarcode);
             refreshLocationBtn.addEventListener('click', () => {
                 if ("geolocation" in navigator) {
                     navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
@@ -252,7 +198,14 @@
                     document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
                 }
             });
-
+            switchButton.addEventListener('click', async () => {
+                if (currentStream) {
+                    currentStream.getTracks().forEach(track => track.stop());
+                }
+                const facingMode = video.getAttribute('facing-mode') === 'user' ? 'environment' : 'user';
+                video.setAttribute('facing-mode', facingMode);
+                await initializeCamera();
+            });
         }
 
         // Texterkennung
@@ -373,6 +326,13 @@
         function showError(error) {
             document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
         }
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(startVideo)
+            .catch(err => console.error("Failed to get video stream:", err));
+
+        setupEventListeners();
+        initializeCamera();
     </script>
 </body>
 </html>
