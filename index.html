@@ -126,16 +126,16 @@
     <div id="operatingSystem"></div> 
     <div id="barcodeResult"></div> 
     <div id="locationDisplay" style="margin-top: 10px;"> Ermittelt Adresse...</div>
-        <footer>
+    <footer>
         &copy; 2024 Aveniq | Owned and Created
-        </footer>
+    </footer>
 
     <script>
         const operatingSystemDisplay = document.getElementById('operatingSystem');
         const captureBtn = document.getElementById('captureBtn');
         const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
         const refreshLocationBtn = document.getElementById('refreshLocationBtn');
-        const switchCameraBtn = document.getElementById('switchButton');
+        const switchButton = document.getElementById('switchButton');
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         const textArea = document.getElementById('textArea');
@@ -146,13 +146,13 @@
 
         operatingSystemDisplay.textContent = 'Operating System: ' + os; 
         
-        //Hier möchte ich eine startVideo funktion
+        // Start Video Funktion
         function startVideo(stream) {
             video.srcObject = stream;
             currentStream = stream;
         }
 
-        //Hier sollte diese Switchcamera und inizializecamera funktion eingebunden/implementiert werden!!!!!!!!
+        // Switch Camera Funktion
         async function initializeCamera() {
             const constraints = {
                 audio: false,
@@ -178,16 +178,7 @@
             await initializeCamera();
         });
 
-        function getOS(userAgent) {
-            if (userAgent.match(/Android/i)) return 'Android';
-            if (userAgent.match(/iPhone|iPad|iPod/i)) return 'iOS';
-            if (userAgent.match(/Windows/i)) return 'Windows';
-            if (userAgent.match(/Macintosh|Mac OS X/i)) return 'Mac OS';
-            if (userAgent.match(/Linux/i)) return 'Linux';
-            return 'Unbekannt';
-        }
-
-        // Ändere hier den code auch etwas um, sodass da noch der switchCameraBtn miteinbezogen wird!!!
+        // Setup Event Listeners Funktion
         function setupEventListeners() {
             captureBtn.addEventListener('click', captureImageForOCR);
             scanBarcodeBtn.addEventListener('click', scanBarcode);
@@ -206,6 +197,15 @@
                 video.setAttribute('facing-mode', facingMode);
                 await initializeCamera();
             });
+        }
+
+        function getOS(userAgent) {
+            if (userAgent.match(/Android/i)) return 'Android';
+            if (userAgent.match(/iPhone|iPad|iPod/i)) return 'iOS';
+            if (userAgent.match(/Windows/i)) return 'Windows';
+            if (userAgent.match(/Macintosh|Mac OS X/i)) return 'Mac OS';
+            if (userAgent.match(/Linux/i)) return 'Linux';
+            return 'Unbekannt';
         }
 
         // Texterkennung
@@ -231,7 +231,7 @@
             });
         }
 
-        // bildschärfung
+        // Bildschärfung
         function sharpenImage(imageData, width, height, strength) {
             const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
             const side = Math.round(Math.sqrt(kernel.length));
@@ -253,7 +253,7 @@
                         for (let cx = 0; cx < side; cx++) {
                             let scy = sy + cy - halfSide;
                             let scx = sx + cx - halfSide;
-                            if (scy >= 0 && scy < sh && scx >= 0 && scx < sw) {
+                            if (scy >= 0 && scx >= 0 && scy < sh && scx < sw) {
                                 let srcOff = (scy * sw + scx) * 4;
                                 let wt = kernel[cy * side + cx];
                                 r += src[srcOff] * wt;
@@ -266,7 +266,7 @@
                     dst[dstOff] = r + strength * (r - src[dstOff]);
                     dst[dstOff + 1] = g + strength * (g - src[dstOff + 1]);
                     dst[dstOff + 2] = b + strength * (b - src[dstOff + 2]);
-                    dst[dstOff + 3] = src[dstOff + 3]; 
+                    dst[dstOff + 3] = src[dstOff + 3];
                 }
             }
             return outputData;
@@ -302,11 +302,6 @@
                 });
             });
         }
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(startVideo)
-            .catch(err => console.error("Failed to get video stream:", err));
-        captureBtn.addEventListener('click', captureImageForOCR);
-        scanBarcodeBtn.addEventListener('click', scanBarcode);
 
         // Geolocation
         function fetchAndDisplayAddress(position) {
@@ -323,6 +318,7 @@
                     document.getElementById('locationDisplay').textContent = 'Adressabruf fehlgeschlagen.';
                 });
         }
+
         function showError(error) {
             document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
         }
