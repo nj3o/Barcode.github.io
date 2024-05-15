@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Capture, OCR, and Barcode Scan</title>
+    <script src='https://unpkg.com/tesseract.js@2.1.0/dist/tesseract.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga/dist/quagga.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+        #video, #canvas, #photo {
+            border: 2px solid #333;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        button {
+            margin-top: 20px;
+            padding: 12px 24px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        textarea {
+            margin-top: 20px;
+            width: 90%;
+            max-width: 320px;
+            height: 100px;
+            border-radius: 8px;
+            padding: 12px;
+            resize: none;
+        }
+        #operatingSystem {
+            margin-top: 10px;
+        }
+        #barcodeResult {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webcam Capture, OCR, and Barcode Scan</h1>
+    <video id="video" width="320" height="240" autoplay playsinline></video>
+    <button id="captureBtn">Capture Image for OCR</button>
+    <button id="scanBarcodeBtn">Scan Barcode</button>
+    <button id="switchCameraBtn" style="display: none;">Switch Camera</button>
+    <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+    <textarea id="textArea" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
+    <div id="operatingSystem"></div> 
+    <div id="barcodeResult"></div> 
+    <button id="refreshLocationBtn">Suche Standort</button>
+    <div id="locationDisplay" style="margin-top: 10px;"> Ermittelt Adresse...</div>
+
+
+    <script>
+        const operatingSystemDisplay = document.getElementById('operatingSystem');
+        const captureBtn = document.getElementById('captureBtn');
+        const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
+        const switchCameraBtn = document.getElementById('switchCameraBtn');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const textArea = document.getElementById('textArea');
+        const barcodeResultDisplay = document.getElementById('barcodeResult');
+        let currentStream;
+
+        const userAgent = navigator.userAgent;
+        const os = getOS(userAgent); // Extract operating system from User-Agent
+        operatingSystemDisplay.textContent = 'Operating System: ' + os;
+
+        function getOS(userAgent) {
+            userAgent = userAgent.toLowerCase();
+    if (userAgent.includes('windows')) return 'Windows';
+    if (userAgent.includes('android')) return 'Android';
+    if (userAgent.includes('macintosh') || userAgent.includes('mac os')) return 'Mac OS';
+    if (userAgent.includes('iphone') || userAgent.includes('ipad') || userAgent.includes('ipod')) return 'iOS';
+    if (userAgent.includes('linux')) return 'Linux';
+    return 'Unbekannt';
+        }
+// Geolocation
+
+document.addEventListener('DOMContentLoaded', function() {
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(startVideo)
+        .catch(err => console.error("Failed to get video stream:", err));
+    setupEventListeners();
+    configureSwitchButtonVisibility(); // Einstellung der Sichtbarkeit des Wechselkameraknopfs basierend auf dem Betriebssystem
+});
+
+function setupEventListeners() {
+    captureBtn.addEventListener('click', captureImageForOCR);
+    scanBarcodeBtn.addEventListener('click', scanBarcode);
+    refreshLocationBtn.addEventListener('click', () => {
+        if ("geolocation" in navigator) {
+            navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
+        } else {
+            document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
+        }
+    });
+}
+
+function fetchAndDisplayAddress(position) {
+    const { latitude, longitude } = position.coords;
+    const apiKey = 'b526254236ad47a1aebff6e137ad1790';
+    const apiUrl = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
+
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            const address = data.results.length > 0 ? data.results[0].formatted : 'Keine Adresse gefunden.';
+            document.getElementById('locationDisplay').textContent = 'Adresse: ' + address;
+        })
+        .catch(() => {
+            document.getElementById('locationDisplay').textContent = 'Adressabruf fehlgeschlagen.';
+        });
+}
+
+function showError(error) {
+    document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
+}
+
+        function startVideo(stream) {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => {
+                    track.stop();
+                });
+            }
+            currentStream = stream;
+            video.srcObject = stream;
+            video.onloadedmetadata = () => {
+                video.play();
+            };
+        }
+
+        function configureSwitchButtonVisibility() {
+            const os = getOS(navigator.userAgent);
+            // Anzeige des Buttons nur für iPhone und Android
+            if (os === 'iOS' || os === 'Android') {
+                switchCameraBtn.style.display = 'inline-block';
+            } else {
+                switchCameraBtn.style.display = 'none';
+            }
+        }
+
+        function switchCamera() {
+    if (!currentStream) return;
+
+    const videoDevices = [];
+    navigator.mediaDevices.enumerateDevices()
+        .then(devices => {
+            devices.forEach(device => {
+                if (device.kind === 'videoinput') {
+                    videoDevices.push(device);
+                }
+            });
+
+            if (videoDevices.length < 2) {
+                console.log("Keine weiteren Kameras zum Wechseln verfügbar.");
+                return;
+            }
+
+            let nextDeviceIndex = videoDevices.findIndex(device => device.deviceId === currentStream.getTracks()[0].getSettings().deviceId) + 1;
+            if (nextDeviceIndex >= videoDevices.length) nextDeviceIndex = 0;
+
+            return navigator.mediaDevices.getUserMedia({ video: { deviceId: { exact: videoDevices[nextDeviceIndex].deviceId } } });
+        })
+        .then(startVideo)
+        .catch(err => console.error("Failed to switch camera:", err));
+}
+
+        function captureImageForOCR() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageDataUrl = canvas.toDataURL('image/png');
+
+            // Simulate a scan effect with vibration and visual feedback
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200]); // Vibrate for 200ms
+            }
+            canvas.style.backgroundColor = '#ffcc00'; // Change canvas background color temporarily
+
+            Tesseract.recognize(
+                imageDataUrl,
+                'deu', // Setting language to German for umlaut recognition
+                {
+                    logger: m => console.log(m) 
+                }
+            ).then(({ data: { text } }) => {
+                textArea.value = text; 
+                canvas.style.backgroundColor = ''; // Reset canvas background color
+            });
+        }
+
+        function scanBarcode() {
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: video
+                },
+                decoder: {
+                    readers: ["ean_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error("Failed to initialize Quagga:", err);
+                    return;
+                }
+                Quagga.start();
+                Quagga.onDetected(function(result) {
+                    barcodeResultDisplay.textContent = 'Barcode: ' + result.codeResult.code;
+                    Quagga.stop();
+                    // Simulate a successful barcode scan effect with vibration and green blink
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate([200]); // Vibrate for 200ms
+                    }
+                    barcodeResultDisplay.style.backgroundColor = 'green';
+                    setTimeout(() => {
+                        barcodeResultDisplay.style.backgroundColor = ''; // Reset background color
+                    }, 1000); // Reset color after 1 second
+                });
+            });
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(startVideo)
+            .catch(err => console.error("Failed to get video stream:", err));
+
+        captureBtn.addEventListener('click', captureImageForOCR);
+        scanBarcodeBtn.addEventListener('click', scanBarcode);
+
+        // Check if the device is iPhone or Samsung for camera switch functionality
+        //if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('Android')) {
+            switchCameraBtn.style.display = 'inline-block';
+            switchCameraBtn.addEventListener('click', switchCamera);
+        //}
+    </script>
+</body>
+</html>
