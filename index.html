@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Webcam Capture, OCR, and Barcode Scan</title>
+    <script src='https://unpkg.com/tesseract.js@2.1.0/dist/tesseract.min.js'></script>
+    <script src="https://cdn.jsdelivr.net/npm/quagga/dist/quagga.min.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f0f0f0;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        h1 {
+            font-size: 20px;
+            margin: 20px;
+        }
+
+        #video, #canvas, #photo {
+            border: 2px solid #333;
+            border-radius: 8px;
+            margin-top: 20px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .button-container {
+            display: flex; 
+            justify-content: center; 
+            gap: 20px; 
+            margin-top: 20px;
+        }
+
+        button {
+            cursor: pointer;
+            background-color: transparent; 
+            border: none;
+            position: relative;
+        }
+
+        button img {
+            height: 50px;
+            width: 50px;
+        }
+
+        .tooltip-text {
+            visibility: hidden;
+            width: 120px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 0;
+            position: absolute;
+            z-index: 1;
+            bottom: -30px;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        button:focus .tooltip-text,
+        button:active .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        #switchCameraBtn {
+            margin-top: 10px;
+            margin-bottom: 0px;
+            display: none;
+        }
+
+        textarea {
+            margin-top: 20px;
+            width: 90%;
+            max-width: 320px;
+            height: 150px;
+            border-radius: 8px;
+            padding: 12px;
+            resize: none;
+        }
+        #operatingSystem {
+            margin-top: 10px;
+        }
+        #barcodeResult {
+            margin-top: 10px;
+        }
+        footer {
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            margin-top: 20px;
+            border-top: 2px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <h1>Webcam Capture, OCR, and Barcode Scan</h1>
+    <video id="video" width="320" height="200" autoplay playsinline></video>
+    <div class="button-container">
+        <button id="captureBtn">
+            <img src="Texterkennung_Piktogramm.png">
+            <div class="tooltip-text">Text erkennen</div>
+        </button>
+        <button id="scanBarcodeBtn">
+            <img src="Scanbarcode.png">
+            <div class="tooltip-text">Barcode scannen</div>
+        </button>
+        <button id="refreshLocationBtn">
+            <img src="Standortsuchen.png">
+            <div class="tooltip-text">Standort suchen</div>
+        </button>
+    </div>
+    <button id="switchButton"><img src="Switchcamera.png" style="height: 50px; width: 50px;"><div class="tooltip-text">Kamera wechseln</div></button>
+    <canvas id="canvas" width="320" height="240" style="display: none;"></canvas>
+    <textarea id="textArea" placeholder="Recognized text or barcode will appear here..." readonly></textarea>
+    <div id="operatingSystem"></div> 
+    <div id="barcodeResult"></div> 
+    <div id="locationDisplay" style="margin-top: 10px;"> Ermittelt Adresse...</div>
+    <footer>
+        &copy; 2024 Aveniq | Owned and Created
+    </footer>
+
+    <script>
+        const operatingSystemDisplay = document.getElementById('operatingSystem');
+        const captureBtn = document.getElementById('captureBtn');
+        const scanBarcodeBtn = document.getElementById('scanBarcodeBtn');
+        const refreshLocationBtn = document.getElementById('refreshLocationBtn');
+        const switchButton = document.getElementById('switchButton');
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const textArea = document.getElementById('textArea');
+        const barcodeResultDisplay = document.getElementById('barcodeResult');
+        const userAgent = navigator.userAgent;
+        const os = getOS(userAgent);
+        let currentStream;
+
+        operatingSystemDisplay.textContent = 'Operating System: ' + os; 
+        
+        // Start Video Funktion
+        function startVideo(stream) {
+            video.srcObject = stream;
+            currentStream = stream;
+        }
+
+        // Switch Camera Funktion
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        }
+        function showButtonOnMobile(buttonId) {
+            const button = document.getElementById(buttonId);
+            if (isMobileDevice()) {
+                button.style.display = 'block'; 
+            } else {
+                button.style.display = 'none'; 
+            }
+        }
+        document.addEventListener('DOMContentLoaded', () => {
+            showButtonOnMobile('switchButton');
+        });
+
+        async function initializeCamera() {
+            const constraints = {
+                audio: false,
+                video: {
+                    facingMode: video.getAttribute('facing-mode') || 'user'
+                }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                startVideo(stream);
+            } catch (err) {
+                console.error('Error accessing camera:', err);
+            }
+        }
+
+        switchButton.addEventListener('click', async () => {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+            const facingMode = video.getAttribute('facing-mode') === 'user' ? 'environment' : 'user';
+            video.setAttribute('facing-mode', facingMode);
+            await initializeCamera();
+        });
+
+        // Setup Event Listeners Funktion
+        function setupEventListeners() {
+            captureBtn.addEventListener('click', captureImageForOCR);
+            scanBarcodeBtn.addEventListener('click', scanBarcode);
+            refreshLocationBtn.addEventListener('click', () => {
+                if ("geolocation" in navigator) {
+                    navigator.geolocation.getCurrentPosition(fetchAndDisplayAddress, showError);
+                } else {
+                    document.getElementById('locationDisplay').textContent = 'Geolocation nicht unterstützt.';
+                }
+            });
+        }
+
+        function getOS(userAgent) {
+            if (userAgent.match(/Android/i)) return 'Android';
+            if (userAgent.match(/iPhone|iPad|iPod/i)) return 'iOS';
+            if (userAgent.match(/Windows/i)) return 'Windows';
+            if (userAgent.match(/Macintosh|Mac OS X/i)) return 'Mac OS';
+            if (userAgent.match(/Linux/i)) return 'Linux';
+            return 'Unbekannt';
+        }
+
+        // Texterkennung
+        function captureImageForOCR() {
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imageDataUrl = canvas.toDataURL('image/png');
+
+            if ('vibrate' in navigator) {
+                navigator.vibrate([200]); 
+            }
+            canvas.style.backgroundColor = '#ffcc00'; 
+
+            Tesseract.recognize(
+                imageDataUrl,
+                'deu', 
+                {
+                    logger: m => console.log(m) 
+                }
+            ).then(({ data: { text } }) => {
+                textArea.value = text; 
+                canvas.style.backgroundColor = ''; 
+            });
+        }
+
+        // Bildschärfung
+        function sharpenImage(imageData, width, height, strength) {
+            const kernel = [0, -1, 0, -1, 5, -1, 0, -1, 0];
+            const side = Math.round(Math.sqrt(kernel.length));
+            const halfSide = Math.floor(side / 2);
+            const src = imageData.data;
+            const sw = width;
+            const sh = height;
+            const w = sw;
+            const outputData = new ImageData(width, height);
+            const dst = outputData.data;
+
+            for (let y = 0; y < sh; y++) {
+                for (let x = 0; x < sw; x++) {
+                    let sy = y;
+                    let sx = x;
+                    let dstOff = (y * w + x) * 4;
+                    let r = 0, g = 0, b = 0, a = 0;
+                    for (let cy = 0; cy < side; cy++) {
+                        for (let cx = 0; cx < side; cx++) {
+                            let scy = sy + cy - halfSide;
+                            let scx = sx + cx - halfSide;
+                            if (scy >= 0 && scx >= 0 && scy < sh && scx < sw) {
+                                let srcOff = (scy * sw + scx) * 4;
+                                let wt = kernel[cy * side + cx];
+                                r += src[srcOff] * wt;
+                                g += src[srcOff + 1] * wt;
+                                b += src[srcOff + 2] * wt;
+                                a += src[srcOff + 3] * wt;
+                            }
+                        }
+                    }
+                    dst[dstOff] = r + strength * (r - src[dstOff]);
+                    dst[dstOff + 1] = g + strength * (g - src[dstOff + 1]);
+                    dst[dstOff + 2] = b + strength * (b - src[dstOff + 2]);
+                    dst[dstOff + 3] = src[dstOff + 3];
+                }
+            }
+            return outputData;
+        }
+
+        // Barcode Scannen
+        function scanBarcode() {
+            Quagga.init({
+                inputStream: {
+                    name: "Live",
+                    type: "LiveStream",
+                    target: video
+                },
+                decoder: {
+                    readers: ["ean_reader"]
+                }
+            }, function(err) {
+                if (err) {
+                    console.error("Failed to initialize Quagga:", err);
+                    return;
+                }
+                Quagga.start();
+                Quagga.onDetected(function(result) {
+                    barcodeResultDisplay.textContent = 'Barcode: ' + result.codeResult.code;
+                    Quagga.stop();
+                    if ('vibrate' in navigator) {
+                        navigator.vibrate([200]); 
+                    }
+                    barcodeResultDisplay.style.backgroundColor = 'green';
+                    setTimeout(() => {
+                        barcodeResultDisplay.style.backgroundColor = '';
+                    }, 1000);
+                });
+            });
+        }
+
+        // Geolocation
+        function fetchAndDisplayAddress(position) {
+            const { latitude, longitude } = position.coords;
+            const apiKey = 'b526254236ad47a1aebff6e137ad1790';
+            const apiUrl = `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`;
+            fetch(apiUrl)
+                .then(response => response.json())
+                .then(data => {
+                    const address = data.results.length > 0 ? data.results[0].formatted : 'Keine Adresse gefunden.';
+                    document.getElementById('locationDisplay').textContent = 'Adresse: ' + address;
+                })
+                .catch(() => {
+                    document.getElementById('locationDisplay').textContent = 'Adressabruf fehlgeschlagen.';
+                });
+        }
+
+        function showError(error) {
+            document.getElementById('locationDisplay').textContent = 'Fehler: ' + error.message;
+        }
+
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(startVideo)
+            .catch(err => console.error("Failed to get video stream:", err));
+
+        setupEventListeners();
+        initializeCamera();
+    </script>
+</body>
+</html>
