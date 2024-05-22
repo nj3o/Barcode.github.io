@@ -282,7 +282,7 @@
         // Barcode Scannen
         async function scanBarcode() {
             if ('BarcodeDetector' in window) {
-                const barcodeDetector = new BarcodeDetector({formats: ['qr_code', 'ean_13', 'code_128', 'data_matrix']});
+                const barcodeDetector = new BarcodeDetector({formats: ['qr_code', 'codabar', 'code_128', 'ean_13', 'ean_8', 'itf', 'upc_a', 'upc_e', 'data_matrix']});
 
                 const context = canvas.getContext('2d');
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
