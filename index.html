@@ -280,34 +280,35 @@
         }
 
         // Barcode Scannen
-        function scanBarcode() {
-            Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: video
-                },
-                decoder: {
-                    readers: ["ean_reader"]
-                }
-            }, function(err) {
-                if (err) {
-                    console.error("Failed to initialize Quagga:", err);
-                    return;
-                }
-                Quagga.start();
-                Quagga.onDetected(function(result) {
-                    barcodeResultDisplay.textContent = 'Barcode: ' + result.codeResult.code;
-                    Quagga.stop();
-                    if ('vibrate' in navigator) {
-                        navigator.vibrate([200]); 
+        async function scanBarcode() {
+            if ('BarcodeDetector' in window) {
+                const barcodeDetector = new BarcodeDetector({formats: ['qr_code', 'ean_13', 'code_128', 'data_matrix']});
+
+                const context = canvas.getContext('2d');
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+
+                try {
+                    const barcodes = await barcodeDetector.detect(imageData);
+                    if (barcodes.length > 0) {
+                        barcodeResultDisplay.textContent = 'Barcode: ' + barcodes[0].rawValue;
+                        if ('vibrate' in navigator) {
+                            navigator.vibrate([200]); // Vibration als Feedback
+                        }
+                        barcodeResultDisplay.style.backgroundColor = 'green';
+                        setTimeout(() => {
+                            barcodeResultDisplay.style.backgroundColor = '';
+                        }, 2000);
+                    } else {
+                        barcodeResultDisplay.textContent = 'Kein Barcode erkannt.';
                     }
-                    barcodeResultDisplay.style.backgroundColor = 'green';
-                    setTimeout(() => {
-                        barcodeResultDisplay.style.backgroundColor = '';
-                    }, 1000);
-                });
-            });
+                } catch (err) {
+                    console.error('Fehler bei der Barcode-Erkennung:', err);
+                    barcodeResultDisplay.textContent = 'Fehler bei der Barcode-Erkennung.';
+                }
+            } else {
+                console.log("Barcode Detector is not supported by this browser.");
+            }
         }
 
         // Geolocation
