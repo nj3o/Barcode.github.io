@@ -252,25 +252,24 @@
     }
 
     // Barcode Scannen
-    function scanBarcode() {
-        Quagga.init({
-            inputStream: {
-                name: "Live",
-                type: "LiveStream",
-                target: video
-            },
-            decoder: {
-                readers: ["ean_reader"]
-            }
-        }, function(err) {
-            if (err) {
-                console.error("Failed to initialize Quagga:", err);
-                return;
-            }
-            Quagga.start();
-            Quagga.onDetected(function(result) {
-                barcodeResultDisplay.textContent = 'Barcode: ' + result.codeResult.code;
-                Quagga.stop();
+    async function scanBarcode() {
+        const barcodeDetector = new BarcodeDetector({
+            formats: [
+                "aztec", "code_128", "code_39", "code_93", "codabar",
+                "data_matrix", "ean_13", "ean_8", "itf", "pdf417",
+                "qr_code", "upc_a", "upc_e"
+            ]
+        });
+
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageBitmap = await createImageBitmap(canvas);
+
+        try {
+            const barcodes = await barcodeDetector.detect(imageBitmap);
+            if (barcodes.length > 0) {
+                const barcodeData = barcodes.map(barcode => barcode.rawValue).join(', ');
+                barcodeResultDisplay.textContent = 'Barcodes: ' + barcodeData;
                 
                 // Beep-Sound abspielen
                 const beepSound = document.getElementById('beepSound');
@@ -286,8 +285,13 @@
                 setTimeout(() => {
                     barcodeResultDisplay.style.backgroundColor = '';
                 }, 1000);
-            });
-        });
+            } else {
+                barcodeResultDisplay.textContent = 'No barcodes detected.';
+            }
+        } catch (err) {
+            console.error('Error detecting barcodes:', err);
+            barcodeResultDisplay.textContent = 'Error detecting barcodes: ' + err.message;
+        }
     }
 
     // Geolocation
