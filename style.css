@@ -1,0 +1,164 @@
+/* Grundlegende Einstellungen für das gesamte Dokument */
+body {
+    font-family: Arial, sans-serif; /* Setzt die Schriftart */
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f4f4f4;
+}
+
+header {
+    width: 100%;
+    padding: 20px 0;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    left: 0;
+}
+
+.txtcontainer {
+    margin-top: 100px; /* Abstand von oben wegen des Headers */
+    width: 90%; /* Responsive Breite */
+    max-width: 400px; /* Maximale Breite des Formulars */
+    padding: 20px;
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.txtfelder {
+    margin-bottom: 15px; /* Abstand zwischen den Eingabefeldern */
+}
+
+label {
+    display: block; /* Sorgt dafür, dass das Label über dem Eingabefeld steht */
+    margin-bottom: 5px;
+}
+
+input[type="text"] {
+    width: 100%; /* Volle Breite innerhalb des form-group Containers */
+    padding: 10px;
+    box-sizing: border-box; /* Inkludiert Padding und Border in die Breite */
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #5c67f2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #4a54e1; /* Dunkler bei Hover */
+}
+
+.index2-container {
+    width: 100%;
+    max-width: 400px;
+    margin-top: 120px; /* Abstand von oben wegen des Headers */
+    padding: 20px;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.index2-row {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+
+.index2-row.index2-row-single {
+    flex-direction: column; /* Stellt sicher, dass der einzelne Button zentriert ist */
+}
+
+.index2-btn {
+    flex: 1; /* Ermöglicht es den Buttons, den verfügbaren Raum zu füllen */
+    margin: 0 5px; /* Gibt einen kleinen Abstand zwischen den Buttons */
+    padding: 10px;
+    background-color: #5c67f2;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+.index2-btn:hover {
+    background-color: #4a54e1; /* Dunkler bei Hover */
+}
+
+#popupmangel {
+    display: none;
+    position: fixed;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    background: white;
+    padding: 20px;
+    border: 1px solid black;
+    z-index: 1000;
+    min-width: 360px;  /* Minimalbreite des Popups festlegen */
+    box-shadow: 0px 4px 6px rgba(0,0,0,0.1);
+    text-align: center;
+    width: 400px; /* Setze eine feste Breite für das gesamte Popup */
+}
+
+#videomangel {
+    width: 80%;  /* Reduziere die Breite des Videos */
+    max-width: 200px; /* Setze eine maximale Breite für das Video */
+    height: auto;  /* Höhe automatisch anpassen */
+    margin: 10px auto;  /* Zentrieren und Abstand geben */
+}
+
+#popupmangel select,
+#popupmangel textarea, /* Anstelle von input[type="text"] */
+#popupmangel button {
+    width: 80%;  /* Breite der Form-Elemente */
+    margin: 10px auto;  /* Zentriert Elemente und gibt Abstand oben und unten */
+    padding: 8px;  /* Polsterung für bessere Benutzbarkeit */
+    box-sizing: border-box;  /* Box-Sizing-Modell für bessere Breitenkontrolle */
+}
+
+#popupmangel textarea {
+    height: 100px; /* Erhöhe die Höhe für mehrzeilige Eingaben */
+    resize: vertical; /* Erlaubt Benutzern, die Höhe des Textfeldes anzupassen, jedoch nur vertikal */
+}
+
+#popupmangel button {
+    cursor: pointer;  /* Cursor als Pointer anzeigen, um Klickbarkeit anzuzeigen */
+    background-color: #5c67f2;  /* Grüne Farbe für Buttons */
+    color: white;  /* Weiße Textfarbe für bessere Lesbarkeit */
+    border: none;  /* Keine Ränder für eine modernere Optik */
+    margin-top: 5px; /* Zusätzlicher Abstand von oben für Buttons */
+    padding: 8px 12px; /* Angepasste Polsterung für kleinere Buttons */
+    font-size: 14px; /* Kleinere Schriftgröße für Buttons */
+}
+
+/* Stile für das eingefrorene Bild */
+#frozenImage {
+    display: none; /* Standardmäßig versteckt */
+    width: 80%; /* Passe die Breite an die gewünschte Größe an */
+    max-width: 200px; /* Maximale Breite, um Übergröße zu verhindern */
+    height: auto; /* Automatische Höhe, um das Seitenverhältnis beizubehalten */
+    margin: 10px auto; /* Zentrieren und Abstand geben */
+    border: 3px solid green; /* Grüne Umrandung */
+    box-sizing: border-box; /* Berücksichtige Polsterung bei der Größenberechnung */
+}
+
+
+
+
+

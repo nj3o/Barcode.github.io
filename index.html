@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" type="text/css" href="style.css">
+<title>PWA-APP</title>
+</head>
+<body>
+    <header>
+        <h1>Anrede definieren</h1>
+        <nav>
+            <a href="index2.html">Nächstes Formular</a>
+        </nav>
+    </header>
+    <div class="txtcontainer">
+        <form>
+            <div class="txtfelder">
+                <label for="dropdownanrede">Wähle eine Anrede:</label>
+                <select id="dropdownanrede" name="dropdownanredename">
+                    <option value="optionherr">Herr</option>
+                    <option value="optionfrau">Frau</option>
+                    <option value="optionfirma">Firma</option>
+                </select>
+            </div>
+            <div class="txtfelder">
+                <label for="anschrifttxt">Anschrift/Kunde:</label>
+                <input type="text" id="anschrifttxt" name="anschriftname">
+            </div>
+            <div class="txtfelder">
+                <label for="adressetxt">Adresse:</label>
+                <input type="text" id="adressetxt" name="adressename">
+            </div>
+            <div class="txtfelder">
+                <label for="ortxt">Ort:</label>
+                <input type="text" id="ortxt" name="ortname">
+            </div>
+            <div class="txtfelder">
+                <label for="telefontxt">Telefon:</label>
+                <input type="text" id="telefontxt" name="telefonname">
+            </div>
+            <button type="submit">Informationen Speichern</button>
+        </form>
+    </div>
+    
+    <script src="https://unpkg.com/docx@8.0.0/build/index.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/1.3.8/FileSaver.js"></script>
+    <script src="scripts.js"></script>
+</body>
+</html>
